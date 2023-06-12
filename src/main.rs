@@ -1,9 +1,10 @@
-use arp_watch::{arp_cache::*, pnet_sniffer::*};
 use std::{
     env::args,
     sync::{Arc, Mutex},
     thread,
 };
+use arp_watch::{arp_cache::*, pnet_sniffer::*};
+use notify_rust::Notification;
 
 fn main() {
     println!("<><><> Arp Watch <><><>");
@@ -19,5 +20,12 @@ fn main() {
         sniffer.scan_network();
         sniffer.rx_th.join().unwrap();
     });
+
+    Notification::new()
+        .appname("Arp watch alert")
+        .summary("Monitoring arp traffic")
+        .show()
+        .unwrap();
+
     thread.join().unwrap();
 }

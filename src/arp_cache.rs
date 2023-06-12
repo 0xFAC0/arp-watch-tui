@@ -1,3 +1,4 @@
+use notify_rust::Notification;
 use pnet::util::MacAddr;
 use std::error::Error;
 use std::fmt::Display;
@@ -70,6 +71,12 @@ impl ArpCache {
             if entry.ip == new_entry.ip && entry.mac != new_entry.mac {
                 println!("{:#?}\n{:#?}\nEntry diff", new_entry, entry);
                 entry_diff = true;
+                Notification::new()
+                    .appname("Arp watch alert")
+                    .summary("Arp entry change")
+                    .body(format!("[{}]\n{}, now {}", entry.ip, entry.mac, new_entry.mac).as_str())
+                    .show()
+                    .unwrap();
             }
         }
         self.vec.push(new_entry);
@@ -79,7 +86,6 @@ impl ArpCache {
             return ArpCacheUpdateResult::NewEntry;
         }
         return ArpCacheUpdateResult::EntryDiff;
-
     }
 }
 
