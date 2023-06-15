@@ -6,7 +6,8 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::net::{AddrParseError, Ipv4Addr};
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use std::vec;
 
 type Result<T> = std::result::Result<T, ArpCacheErrors>;
@@ -65,24 +66,35 @@ impl ArpCache {
         let mut entry_diff = false;
         for entry in self.vec.iter() {
             if new_entry.ip == entry.ip && new_entry.mac == entry.mac {
-                println!("{:#?}\nEntry already exist", { new_entry });
+                println!("{:#?}\n[ARP Cache] Entry already exist", { new_entry });
                 return ArpCacheUpdateResult::AlreadyExist;
             }
             if entry.ip == new_entry.ip && entry.mac != new_entry.mac {
-                println!("{:#?}\n{:#?}\nEntry diff", new_entry, entry);
+                println!("{:#?}\n{:#?}\n[ARP Cache] Entry divergeance spotted", new_entry, entry);
                 entry_diff = true;
-                Notification::new()
+                match Notification::new()
                     .appname("Arp watch alert")
                     .summary("Arp entry change")
-                    .body(format!("[{}]\n{}, now {}", entry.ip, entry.mac, new_entry.mac).as_str())
-                    .show()
-                    .unwrap();
+                    .body(format!("[{}]\nwas {}, now {}", entry.ip, entry.mac, new_entry.mac).as_str())
+                    .show() {
+                        Ok(_) => (),
+                        Err(e) => println!("Notification failed: {e}")
+                    };
+
             }
         }
         self.vec.push(new_entry);
 
         if !entry_diff {
-            println!("{:#?}\nNew Entry", new_entry);
+            println!("{:#?}\n[ARP Cache] New entry registered", new_entry);
+            match Notification::new()
+                .appname("Arp watch alert")
+                .summary("New ARP entry")
+                .body(format!("{} at {}", new_entry.ip, new_entry.mac).as_str())
+                .show() {
+                    Ok(_) => (),
+                    Err(e) => println!("Notification failed: {e}")
+                };
             return ArpCacheUpdateResult::NewEntry;
         }
         return ArpCacheUpdateResult::EntryDiff;
