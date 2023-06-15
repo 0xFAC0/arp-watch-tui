@@ -96,7 +96,7 @@ impl ArpCache {
             println!("[ARP Cache] New entry registered");
             return ArpCacheUpdateResult::NewEntry;
         }
-        return ArpCacheUpdateResult::EntryDiff;
+        ArpCacheUpdateResult::EntryDiff
     }
 }
 

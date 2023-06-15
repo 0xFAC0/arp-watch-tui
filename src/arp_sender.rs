@@ -17,7 +17,7 @@ impl ArpSender {
             IpAddr::V4(ipv4) => ipv4,
             IpAddr::V6(_) => unimplemented!()
         };
-        let source_mac = interface.mac.expect(format!("No MAC address for {}", interface.name).as_str());
+        let source_mac = interface.mac.unwrap_or_else(|| panic!("No MAC address for {}", interface.name));
         let (tx, _) = match datalink::channel(interface, Default::default()) {
             Ok(Ethernet(tx, rx)) => (tx, rx),
             Ok(_) => panic!("Unhandled channel type"),
