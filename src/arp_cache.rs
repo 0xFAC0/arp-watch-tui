@@ -75,7 +75,7 @@ impl ArpCache {
                 return ArpCacheUpdateResult::AlreadyExist;
             }
             if entry.ip == new_entry.ip && entry.mac != new_entry.mac {
-                println!("[ARP Cache] Entry divergeance spotted");
+                println!("[ARP Cache] Entry divergence spotted");
                 entry_diff = true;
                 match Notification::new()
                     .appname("Arp watch alert")
