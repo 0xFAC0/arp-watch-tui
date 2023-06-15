@@ -66,11 +66,11 @@ impl ArpCache {
         let mut entry_diff = false;
         for entry in self.vec.iter() {
             if new_entry.ip == entry.ip && new_entry.mac == entry.mac {
-                println!("{:#?}\n[ARP Cache] Entry already exist", { new_entry });
+                println!("[ARP Cache] Entry already exist");
                 return ArpCacheUpdateResult::AlreadyExist;
             }
             if entry.ip == new_entry.ip && entry.mac != new_entry.mac {
-                println!("{:#?}\n{:#?}\n[ARP Cache] Entry divergeance spotted", new_entry, entry);
+                println!("[ARP Cache] Entry divergeance spotted");
                 entry_diff = true;
                 match Notification::new()
                     .appname("Arp watch alert")
@@ -80,13 +80,10 @@ impl ArpCache {
                         Ok(_) => (),
                         Err(e) => println!("Notification failed: {e}")
                     };
-
             }
         }
-        self.vec.push(new_entry);
 
         if !entry_diff {
-            println!("{:#?}\n[ARP Cache] New entry registered", new_entry);
             match Notification::new()
                 .appname("Arp watch alert")
                 .summary("New ARP entry")
@@ -95,6 +92,8 @@ impl ArpCache {
                     Ok(_) => (),
                     Err(e) => println!("Notification failed: {e}")
                 };
+            self.vec.push(new_entry);
+            println!("[ARP Cache] New entry registered");
             return ArpCacheUpdateResult::NewEntry;
         }
         return ArpCacheUpdateResult::EntryDiff;

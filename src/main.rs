@@ -12,6 +12,6 @@ async fn main() {
     let arp_cache_mutex = Arc::new(Mutex::new(arp_cache));
     let mut listener = watcher.listener(arp_cache_mutex);
     let mut sender = watcher.sender();
-    join!(listener.packet_handler(), sender.scan_network());
+    join!(sender.scan_network(), listener.packet_handler());
     
 }
