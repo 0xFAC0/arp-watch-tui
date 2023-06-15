@@ -17,6 +17,10 @@ cd arp-watch-tui
 ```
 > TODO: Makefile clean install and uninstall in path
 
+## Usage
+
+`./start_arp_watch.sh <interface>`
+
 ## Known issue
 Most users require privilege for sniffing packet on an interface, 
 however the sudo privilege doesn't keep environment variable required by dbus
