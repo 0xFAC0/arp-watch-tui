@@ -43,7 +43,7 @@ impl NetArpSender {
     }
 
     pub async fn scan_network(&mut self) {
-        println!("Starting host scan on {}", self.network_addr);
+        // println!("Starting host scan on {}", self.network_addr);
 
         // Very nice network address range traversal from ipnetwork crate
         for target_ip in self.network_addr.iter() {
@@ -83,6 +83,6 @@ impl NetArpSender {
                 .unwrap()
                 .unwrap();
         }
-        println!("Done sending arp request");
+        // println!("Done sending arp request");
     }
 }
