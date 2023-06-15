@@ -1,8 +1,9 @@
 use std::{error::Error, fs::File, io::Read, net::Ipv4Addr, path::Path, sync::Arc};
 
-use notify_rust::Notification;
 use pnet::util::MacAddr;
 use tokio::sync::Mutex;
+
+use crate::alert::alert;
 
 const PATH: &str = "/proc/net/arp";
 
@@ -77,32 +78,15 @@ impl ArpCache {
             if entry.ip == new_entry.ip && entry.mac != new_entry.mac {
                 println!("[ARP Cache] Entry divergence spotted");
                 entry_diff = true;
-                match Notification::new()
-                    .appname("Arp watch alert")
-                    .summary("Arp entry change")
-                    .body(
-                        format!("[{}]\nwas {}, now {}", entry.ip, entry.mac, new_entry.mac)
-                            .as_str(),
-                    )
-                    .show()
-                {
-                    Ok(_) => (),
-                    Err(e) => println!("Notification failed: {e}"),
-                };
+                alert(format!(
+                    "[{}]\nwas {}, now {}",
+                    entry.ip, entry.mac, new_entry.mac
+                ));
             }
         }
 
         if !entry_diff {
-            match Notification::new()
-                .appname("Arp watch alert")
-                .summary("New ARP entry")
-                .body(format!("{} at {}", new_entry.ip, new_entry.mac).as_str())
-                .show()
-            {
-                Ok(_) => (),
-                Err(e) => println!("Notification failed: {e}"),
-            };
-
+            alert(format!("{} at {}", new_entry.ip, new_entry.mac));
             if self.follow_update {
                 self.vec.push(new_entry);
             }
