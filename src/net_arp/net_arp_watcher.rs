@@ -1,9 +1,6 @@
 use pnet::datalink::{self, NetworkInterface};
 
-use crate::{
-    arp_cache::ArpCacheMutex, 
-    net_arp::net_arp_sender::NetArpSender,
-};
+use crate::arp_cache::*;
 
 use super::*;
 

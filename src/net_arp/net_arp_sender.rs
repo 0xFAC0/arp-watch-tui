@@ -1,32 +1,48 @@
-use core::panic;
-use std::{net::{IpAddr, Ipv4Addr}};
+use std::net::IpAddr;
 
-use pnet::{datalink::{DataLinkSender, NetworkInterface, Channel::Ethernet, self}, util::MacAddr, ipnetwork::IpNetwork, packet::{ethernet::{MutableEthernetPacket, EtherTypes}, arp::{MutableArpPacket, ArpHardwareTypes, ArpOperations}, MutablePacket, Packet}};
+use pnet::{
+    datalink::{self, Channel::Ethernet, NetworkInterface},
+    packet::{
+        arp::{ArpHardwareTypes, ArpOperations, MutableArpPacket},
+        ethernet::{EtherTypes, MutableEthernetPacket},
+        MutablePacket, Packet,
+    },
+    util::MacAddr,
+};
 
-pub struct NetArpSender {
-    tx: Box<dyn DataLinkSender>,
-    source_mac: MacAddr,
-    source_ip: Ipv4Addr,
-    network_addr: IpNetwork,
-}
+use super::*;
 
 impl NetArpSender {
     pub fn new(interface: &NetworkInterface) -> Self {
-        let network_addr = interface.ips.first().expect("No network ip avaible").to_owned();
+        let network_addr = interface
+            .ips
+            .first()
+            .expect("No network ip avaible")
+            .to_owned();
         let source_ip = match network_addr.ip() {
             IpAddr::V4(ipv4) => ipv4,
-            IpAddr::V6(_) => unimplemented!()
+            IpAddr::V6(_) => unimplemented!(),
         };
-        let source_mac = interface.mac.unwrap_or_else(|| panic!("No MAC address for {}", interface.name));
+        let source_mac = interface
+            .mac
+            .unwrap_or_else(|| panic!("No MAC address for {}", interface.name));
         let (tx, _) = match datalink::channel(interface, Default::default()) {
             Ok(Ethernet(tx, rx)) => (tx, rx),
             Ok(_) => panic!("Unhandled channel type"),
-            Err(e) => panic!("An error occurred when creating the datalink sender channel: {}", e)
+            Err(e) => panic!(
+                "An error occurred when creating the datalink sender channel: {}",
+                e
+            ),
         };
-        Self { tx, source_mac, source_ip, network_addr }
+        Self {
+            tx,
+            source_mac,
+            source_ip,
+            network_addr,
+        }
     }
 
-    pub async fn scan_network(&mut self)  {
+    pub async fn scan_network(&mut self) {
         println!("Starting host scan on {}", self.network_addr);
 
         // Very nice network address range traversal from ipnetwork crate

@@ -1,7 +1,7 @@
 use core::panic;
 
 use pnet::{
-    datalink::{self, Channel::Ethernet, DataLinkReceiver, NetworkInterface},
+    datalink::{self, Channel::Ethernet, NetworkInterface},
     packet::{
         arp::{ArpOperations, ArpPacket},
         ethernet::{EtherTypes, EthernetPacket},
@@ -49,9 +49,19 @@ impl NetArpListener {
                 let sender_ip = arp_packet.get_sender_proto_addr();
 
                 if operation == ArpOperations::Reply {
-                    println!("[Listener] ARP Reply\n[Listener] {} is at {}", sender_ip, sender_mac);
+                    println!(
+                        "[Listener] ARP Reply\n[Listener] {} is at {}",
+                        sender_ip, sender_mac
+                    );
+                    let mut arp_cache = self.arp_cache.lock().await;
+                    arp_cache.update(ArpEntry::new(sender_ip, sender_mac));
                 } else if operation == ArpOperations::Request && sender_ip == target_ip {
-                    println!("[Listener] ARP Annoncement\n[Listener] {} is at {}", sender_ip, sender_mac);
+                    println!(
+                        "[Listener] ARP Annoncement\n[Listener] {} is at {}",
+                        sender_ip, sender_mac
+                    );
+                    let mut arp_cache = self.arp_cache.lock().await;
+                    arp_cache.update(ArpEntry::new(sender_ip, sender_mac));
                 }
             }
         }

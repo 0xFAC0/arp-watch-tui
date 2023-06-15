@@ -1,6 +1,10 @@
 use std::net::Ipv4Addr;
 
-use pnet::{datalink::{DataLinkSender, DataLinkReceiver, NetworkInterface}, util::MacAddr, ipnetwork::IpNetwork};
+use pnet::{
+    datalink::{DataLinkReceiver, DataLinkSender, NetworkInterface},
+    ipnetwork::IpNetwork,
+    util::MacAddr,
+};
 
 use crate::arp_cache::ArpCacheMutex;
 

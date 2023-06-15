@@ -1,61 +1,66 @@
+use std::{error::Error, fs::File, io::Read, net::Ipv4Addr, path::Path, sync::Arc};
+
 use notify_rust::Notification;
 use pnet::util::MacAddr;
-use std::error::Error;
-use std::fmt::Display;
-use std::fs::File;
-use std::io::prelude::*;
-use std::net::{AddrParseError, Ipv4Addr};
-use std::path::Path;
-use std::sync::Arc;
 use tokio::sync::Mutex;
-use std::vec;
 
-type Result<T> = std::result::Result<T, ArpCacheErrors>;
+const PATH: &str = "/proc/net/arp";
+
 pub type ArpCacheMutex = Arc<Mutex<ArpCache>>;
-
-const CACHE_STR_PATH: &str = "/proc/net/arp";
 
 #[derive(Debug, Clone)]
 pub struct ArpCache {
     vec: Vec<ArpEntry>,
+    follow_update: bool,
+}
+
+pub enum ArpCacheUpdateResult {
+    NewEntry,
+    AlreadyExist,
+    EntryDiff,
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub struct ArpEntry {
+    ip: Ipv4Addr,
+    mac: MacAddr,
 }
 
 impl ArpCache {
-    pub fn new() -> Result<Self> {
+    pub fn new(follow_update: bool) -> Self {
         let mut ret = ArpCache {
             vec: vec![],
+            follow_update,
         };
-        ret.fetch()?;
-        Ok(ret)
+        ret.parse().unwrap();
+        ret
     }
 
-    pub fn fetch(&mut self) -> Result<u8> {
+    pub fn parse(&mut self) -> std::result::Result<u8, Box<dyn Error>> {
         let mut entry_count: u8 = 0;
 
-        let path = Path::new(CACHE_STR_PATH);
-        let mut file = match File::open(path) {
-            Ok(f) => f,
-            Err(io_err) => return Err(ArpCacheErrors::IOError(io_err)),
-        };
+        let path = Path::new(PATH);
+        let mut file = File::open(path)?;
 
         let mut file_content = String::new();
-        file.read_to_string(&mut file_content)?;
+        file.read_to_string(&mut file_content).unwrap();
         for line in file_content.lines() {
             let mut words = line.split_whitespace();
-            let first_column = words.next();
-            if first_column.is_none() || first_column.unwrap() == "IP" {
-                continue;
-            }
-
+            let ip_str = match words.next() {
+                Some(addr) => {
+                    if addr == "IP" {
+                        continue;
+                    }
+                    addr
+                }
+                None => continue,
+            };
             words.next();
             words.next();
             // TODO parse the last collumn for the mask
-            let ip_str = first_column.unwrap();
             let mac_str = words.next().unwrap();
-            let new_entry = match ArpEntry::from(ip_str, mac_str) {
-                Ok(entry) => entry,
-                Err(err) => return Err(err),
-            };
+            let new_entry = ArpEntry::from(ip_str, mac_str);
+
             self.vec.push(new_entry);
             entry_count += 1;
         }
@@ -75,11 +80,15 @@ impl ArpCache {
                 match Notification::new()
                     .appname("Arp watch alert")
                     .summary("Arp entry change")
-                    .body(format!("[{}]\nwas {}, now {}", entry.ip, entry.mac, new_entry.mac).as_str())
-                    .show() {
-                        Ok(_) => (),
-                        Err(e) => println!("Notification failed: {e}")
-                    };
+                    .body(
+                        format!("[{}]\nwas {}, now {}", entry.ip, entry.mac, new_entry.mac)
+                            .as_str(),
+                    )
+                    .show()
+                {
+                    Ok(_) => (),
+                    Err(e) => println!("Notification failed: {e}"),
+                };
             }
         }
 
@@ -88,28 +97,21 @@ impl ArpCache {
                 .appname("Arp watch alert")
                 .summary("New ARP entry")
                 .body(format!("{} at {}", new_entry.ip, new_entry.mac).as_str())
-                .show() {
-                    Ok(_) => (),
-                    Err(e) => println!("Notification failed: {e}")
-                };
-            self.vec.push(new_entry);
+                .show()
+            {
+                Ok(_) => (),
+                Err(e) => println!("Notification failed: {e}"),
+            };
+
+            if self.follow_update {
+                self.vec.push(new_entry);
+            }
             println!("[ARP Cache] New entry registered");
+
             return ArpCacheUpdateResult::NewEntry;
         }
         ArpCacheUpdateResult::EntryDiff
     }
-}
-
-pub enum ArpCacheUpdateResult {
-    NewEntry,
-    AlreadyExist,
-    EntryDiff,
-}
-
-#[derive(Debug, PartialEq, Copy, Clone)]
-pub struct ArpEntry {
-    ip: Ipv4Addr,
-    mac: MacAddr,
 }
 
 impl ArpEntry {
@@ -117,24 +119,14 @@ impl ArpEntry {
         Self { ip, mac }
     }
 
-    pub fn from(ip_str: &str, mac_str: &str) -> Result<Self> {
+    pub fn from(ip_str: &str, mac_str: &str) -> Self {
         println!(
             "Making new ARP Entry from existing cache: {} {}",
             ip_str, mac_str
         );
-        let ip: Ipv4Addr = match ip_str.parse() {
-            Ok(ip) => ip,
-            Err(err) => {
-                return Err(ArpCacheErrors::IpParserError(err));
-            }
-        };
-        let mac: MacAddr = match mac_str.parse() {
-            Ok(mac) => mac,
-            Err(_) => {
-                return Err(ArpCacheErrors::MacParserError);
-            }
-        };
-        Ok(Self { ip, mac })
+        let ip: Ipv4Addr = ip_str.parse().unwrap();
+        let mac: MacAddr = mac_str.parse().unwrap();
+        Self { ip, mac }
     }
 
     pub fn ip(&self) -> &Ipv4Addr {
@@ -145,32 +137,3 @@ impl ArpEntry {
         &self.mac
     }
 }
-
-#[derive(Debug)]
-pub enum ArpCacheErrors {
-    IOError(std::io::Error),
-    IpParserError(AddrParseError),
-    MacParserError,
-}
-
-impl From<std::io::Error> for ArpCacheErrors {
-    fn from(value: std::io::Error) -> Self {
-        ArpCacheErrors::IOError(value)
-    }
-}
-
-impl Display for ArpCacheErrors {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ArpCacheErrors::IOError(io_err) => write!(f, "Arp cache IO Error: {}", io_err),
-            ArpCacheErrors::IpParserError(parser_err) => {
-                write!(f, "Failed to parse ip from arp cache: {}", parser_err)
-            }
-            ArpCacheErrors::MacParserError => {
-                write!(f, "Failed to parse mac from arp cache")
-            }
-        }
-    }
-}
-
-impl Error for ArpCacheErrors {}
