@@ -1,14 +1,16 @@
 use crossterm::{
-    event::{self, EnableMouseCapture, Event, KeyCode, DisableMouseCapture},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
-    terminal::{enable_raw_mode, EnterAlternateScreen, disable_raw_mode, LeaveAlternateScreen},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use std::io;
 use tui::{
     backend::{Backend, CrosstermBackend},
-    widgets::{Block, Borders},
-    Frame, Terminal, layout::{Layout, Constraint},
+    style::{Color, Style},
+    widgets::{Block, BorderType, Borders},
+    Frame, Terminal,
 };
+use tui_logger::{TuiLoggerLevelOutput, TuiLoggerWidget};
 
 use crate::net_arp::NetArpSenderMutex;
 
@@ -25,7 +27,12 @@ pub async fn main_tui(app: App) {
 
     term.clear().unwrap();
     disable_raw_mode().unwrap();
-    execute!(term.backend_mut(), LeaveAlternateScreen, DisableMouseCapture).unwrap();
+    execute!(
+        term.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )
+    .unwrap();
     term.show_cursor().unwrap();
 }
 
@@ -38,18 +45,37 @@ pub async fn run_app<B: Backend>(term: &mut Terminal<B>, app: App) {
                 KeyCode::Char('q') => break,
                 KeyCode::Char('s') => {
                     let sender_mutex: NetArpSenderMutex = app.net_sender.clone();
-                    tokio::spawn(async move {
+                    tokio::task::spawn(async move {
                         let mut sender = sender_mutex.lock().await;
                         sender.scan_network().await;
                     });
-                },
-                _ => continue
+                }
+                _ => continue,
             };
         }
     }
 }
 
 pub fn draw<B: Backend>(frame: &mut Frame<B>) {
-    let main_b = Block::default().borders(Borders::ALL).title("Box");
-    frame.render_widget(main_b, frame.size());
+    let tui_sm = TuiLoggerWidget::default()
+        .style_error(Style::default().fg(Color::Red))
+        .style_debug(Style::default().fg(Color::Green))
+        .style_warn(Style::default().fg(Color::Yellow))
+        .style_trace(Style::default().fg(Color::Magenta))
+        .style_info(Style::default().fg(Color::Cyan))
+        .output_separator(':')
+        .output_timestamp(Some("%H:%M:%S".to_string()))
+        .output_level(Some(TuiLoggerLevelOutput::Abbreviated))
+        .output_target(true)
+        .output_file(true)
+        .output_line(true)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded)
+                .style(Style::default())
+                .title("Logs")
+        );
+
+    frame.render_widget(tui_sm, frame.size());
 }

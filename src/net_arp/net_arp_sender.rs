@@ -1,5 +1,6 @@
 use std::net::IpAddr;
 
+use log::info;
 use pnet::{
     datalink::{self, Channel::Ethernet, NetworkInterface},
     packet::{
@@ -43,7 +44,7 @@ impl NetArpSender {
     }
 
     pub async fn scan_network(&mut self) {
-        // println!("Starting host scan on {}", self.network_addr);
+        info!("Starting host scan on {}", self.network_addr);
 
         // Very nice network address range traversal from ipnetwork crate
         for target_ip in self.network_addr.iter() {
@@ -83,6 +84,6 @@ impl NetArpSender {
                 .unwrap()
                 .unwrap();
         }
-        // println!("Done sending arp request");
+        info!("Done sending arp request");
     }
 }

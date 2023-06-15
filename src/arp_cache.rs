@@ -1,5 +1,6 @@
 use std::{error::Error, fs::File, io::Read, net::Ipv4Addr, path::Path, sync::Arc};
 
+use log::{info, warn};
 use pnet::util::MacAddr;
 use tokio::sync::Mutex;
 
@@ -72,11 +73,11 @@ impl ArpCache {
         let mut entry_diff = false;
         for entry in self.vec.iter() {
             if new_entry.ip == entry.ip && new_entry.mac == entry.mac {
-                // println!("[ARP Cache] Entry already exist");
+                info!("[ARP Cache] Entry already exist");
                 return ArpCacheUpdateResult::AlreadyExist;
             }
             if entry.ip == new_entry.ip && entry.mac != new_entry.mac {
-                // println!("[ARP Cache] Entry divergence spotted");
+                warn!("[ARP Cache] Entry divergence spotted");
                 entry_diff = true;
                 alert(format!(
                     "[{}]\nwas {}, now {}",
@@ -90,7 +91,7 @@ impl ArpCache {
             if self.follow_update {
                 self.vec.push(new_entry);
             }
-            //println!("[ARP Cache] New entry registered");
+            info!("[ARP Cache] New entry registered");
 
             return ArpCacheUpdateResult::NewEntry;
         }
@@ -104,10 +105,10 @@ impl ArpEntry {
     }
 
     pub fn from(ip_str: &str, mac_str: &str) -> Self {
-        // println!(
-        //     "Making new ARP Entry from existing cache: {} {}",
-        //     ip_str, mac_str
-        // );
+        info!(
+            "Making new ARP Entry from existing cache: {} {}",
+            ip_str, mac_str
+        );
         let ip: Ipv4Addr = ip_str.parse().unwrap();
         let mac: MacAddr = mac_str.parse().unwrap();
         Self { ip, mac }

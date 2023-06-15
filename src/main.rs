@@ -5,8 +5,7 @@ use tokio::{join, sync::Mutex};
 
 #[tokio::main]
 async fn main() {
-    // println!("<><><> Arp Watch <><><>");
-
+    tui_logger::init_logger(log::LevelFilter::Trace).unwrap();
     let arp_cache = ArpCache::new(false);
     let arp_cache_mutex = Arc::new(Mutex::new(arp_cache));
 

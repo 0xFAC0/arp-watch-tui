@@ -1,3 +1,4 @@
+use log::error;
 use notify_rust::Notification;
 
 pub fn info(body: String) {
@@ -7,7 +8,7 @@ pub fn info(body: String) {
         .body(&body)
         .show() {
             Ok(_) => (),
-            Err(e) => println!("Alert error: {e}")
+            Err(e) => error!("{e}")
         }
 }
 
@@ -18,6 +19,6 @@ pub fn alert(body: String) {
         .body(&body)
         .show() {
             Ok(_) => (),
-            Err(e) => println!("Alert error: {e}")
+            Err(e) => error!("{e}")
         }
 }
