@@ -23,8 +23,9 @@ cd arp-watch-tui
 
 ## Known issue
 Most users require privilege for sniffing packet on an interface, 
-however the sudo privilege doesn't keep environment variable required by dbus
-the `start_arp_watch.sh` provide a temporary fix by starting the program with sudo and dbus-launch.
+however the sudo privilege doesn't keep environment variable required by dbus.
+
+The `start_arp_watch.sh` provide a temporary fix by starting the program with sudo running dbus-launch.
 
 Feel free to contribute or share your ideas as the current *fix* is temporary
 
