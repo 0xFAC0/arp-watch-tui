@@ -9,14 +9,11 @@ use pnet::{
     },
 };
 
-use crate::arp_cache::{ArpCacheMutex, ArpEntry};
+use crate::arp_cache::*;
 
-pub struct ArpListener {
-    rx: Box<dyn DataLinkReceiver>,
-    arp_cache: ArpCacheMutex,
-}
+use super::NetArpListener;
 
-impl ArpListener {
+impl NetArpListener {
     pub fn new(interface: &NetworkInterface, arp_cache: ArpCacheMutex) -> Self {
         let (_, rx) = match datalink::channel(interface, Default::default()) {
             Ok(Ethernet(tx, rx)) => (tx, rx),
@@ -53,14 +50,8 @@ impl ArpListener {
 
                 if operation == ArpOperations::Reply {
                     println!("[Listener] ARP Reply\n[Listener] {} is at {}", sender_ip, sender_mac);
-                    let new_entry = ArpEntry::new(sender_ip, sender_mac);
-                    let mut arp_cache = self.arp_cache.lock().await;
-                    arp_cache.update(new_entry);
                 } else if operation == ArpOperations::Request && sender_ip == target_ip {
                     println!("[Listener] ARP Annoncement\n[Listener] {} is at {}", sender_ip, sender_mac);
-                    let new_entry = ArpEntry::new(sender_ip, sender_mac);
-                    let mut arp_cache = self.arp_cache.lock().await;
-                    arp_cache.update(new_entry);
                 }
             }
         }

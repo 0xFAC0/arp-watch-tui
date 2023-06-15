@@ -3,14 +3,14 @@ use std::{net::{IpAddr, Ipv4Addr}};
 
 use pnet::{datalink::{DataLinkSender, NetworkInterface, Channel::Ethernet, self}, util::MacAddr, ipnetwork::IpNetwork, packet::{ethernet::{MutableEthernetPacket, EtherTypes}, arp::{MutableArpPacket, ArpHardwareTypes, ArpOperations}, MutablePacket, Packet}};
 
-pub struct ArpSender {
+pub struct NetArpSender {
     tx: Box<dyn DataLinkSender>,
     source_mac: MacAddr,
     source_ip: Ipv4Addr,
     network_addr: IpNetwork,
 }
 
-impl ArpSender {
+impl NetArpSender {
     pub fn new(interface: &NetworkInterface) -> Self {
         let network_addr = interface.ips.first().expect("No network ip avaible").to_owned();
         let source_ip = match network_addr.ip() {
