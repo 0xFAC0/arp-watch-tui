@@ -1,4 +1,5 @@
 use core::panic;
+use std::error::Error;
 
 use log::{warn, info};
 use pnet::{
@@ -27,7 +28,7 @@ impl NetArpListener {
         Self { rx, arp_cache }
     }
 
-    pub async fn packet_handler(&mut self) {
+    pub async fn packet_handler(&mut self) -> Result<(), Box<dyn Error>> {
         loop {
             if let Ok(buf) = self.rx.next() {
                 let ethernet_packet = match EthernetPacket::new(buf) {

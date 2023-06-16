@@ -3,7 +3,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::io;
+use std::{io, error::Error};
 use tui::{
     backend::{Backend, CrosstermBackend},
     style::{Color, Style},
@@ -16,31 +16,31 @@ use crate::net_arp::NetArpSenderMutex;
 
 use super::App;
 
-pub async fn main_tui(app: App) {
-    enable_raw_mode().unwrap();
+pub async fn main_tui(app: App) -> Result<(), Box<dyn Error>> {
+    enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture).unwrap();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
     let backend = CrosstermBackend::new(stdout);
-    let mut term = Terminal::new(backend).unwrap();
+    let mut term = Terminal::new(backend)?;
 
-    run_app(&mut term, app).await;
+    run_app(&mut term, app).await?;
 
-    term.clear().unwrap();
+    term.clear()?;
     disable_raw_mode().unwrap();
     execute!(
         term.backend_mut(),
         LeaveAlternateScreen,
         DisableMouseCapture
-    )
-    .unwrap();
-    term.show_cursor().unwrap();
+    )?;
+    term.show_cursor()?;
+    Ok(())
 }
 
-pub async fn run_app<B: Backend>(term: &mut Terminal<B>, app: App) {
+pub async fn run_app<B: Backend>(term: &mut Terminal<B>, app: App) -> Result<(), Box<dyn Error>> {
     loop {
-        term.draw(draw).unwrap();
+        term.draw(draw)?;
 
-        if let Event::Key(key) = event::read().unwrap() {
+        if let Event::Key(key) = event::read()? {
             match key.code {
                 KeyCode::Char('q') => break,
                 KeyCode::Char('s') => {
@@ -54,6 +54,7 @@ pub async fn run_app<B: Backend>(term: &mut Terminal<B>, app: App) {
             };
         }
     }
+    Ok(())
 }
 
 pub fn draw<B: Backend>(frame: &mut Frame<B>) {

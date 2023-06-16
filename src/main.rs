@@ -1,7 +1,8 @@
 use std::{env, sync::Arc};
 
 use arp_watch::{arp_cache::ArpCache, net_arp::*, ui::*};
-use tokio::{join, sync::Mutex};
+use log::error;
+use tokio::{select, sync::Mutex};
 
 #[tokio::main]
 async fn main() {
@@ -15,5 +16,12 @@ async fn main() {
 
     let app = App::new(arp_cache_mutex, sender);
 
-    join!(tui::main_tui(app), listener.packet_handler());
+    select!(
+        res = tui::main_tui(app) => {
+            if let Err(e) = res {
+                error!("TUI Failed: {e}")
+            }
+        },
+        _ = listener.packet_handler() => (),
+    );
 }
