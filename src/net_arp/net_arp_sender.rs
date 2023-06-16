@@ -1,4 +1,4 @@
-use std::net::IpAddr;
+use std::{error::Error, net::IpAddr};
 
 use log::info;
 use pnet::{
@@ -43,10 +43,10 @@ impl NetArpSender {
         }
     }
 
-    pub async fn scan_network(&mut self) {
+    pub async fn scan_network(&mut self) -> std::io::Result<()> {
         info!("Starting host scan on {}", self.network_addr);
 
-        // Very nice network address range traversal from ipnetwork crate
+        // Very nice network address range traversal from ipnetwork
         for target_ip in self.network_addr.iter() {
             // Unwrapp IpAddr to Ipv4Addr
             let target_ip = match target_ip {
@@ -77,13 +77,9 @@ impl NetArpSender {
             // Smooth
             ethernet_packet.set_payload(arp_packet.packet_mut());
 
-            // Comment form pnet: The second parameter is ignored but None must still be passed
-            // Send to wrap 2 results, pnet scope error and std io's result
-            self.tx
-                .send_to(ethernet_packet.packet(), None)
-                .unwrap()
-                .unwrap();
+            self.tx.send_to(ethernet_packet.packet(), None).unwrap()?;
         }
         info!("Done sending arp request");
+        Ok(())
     }
 }

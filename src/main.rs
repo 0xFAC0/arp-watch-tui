@@ -17,11 +17,15 @@ async fn main() {
     let app = App::new(arp_cache_mutex, sender);
 
     select!(
-        res = tui::main_tui(app) => {
-            if let Err(e) = res {
+        ret = tui::main_tui(app) => {
+            if let Err(e) = ret {
                 error!("TUI Failed: {e}")
             }
         },
-        _ = listener.packet_handler() => (),
+        ret = listener.packet_handler() => {
+            if let Err(e) = ret {
+                error!("Packet handler failed: {e}")
+            }
+        },
     );
 }
