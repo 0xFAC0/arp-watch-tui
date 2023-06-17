@@ -88,12 +88,14 @@ impl ArpCache {
 
         if !entry_diff {
             alert(format!("{} at {}", new_entry.ip, new_entry.mac));
-            if self.follow_update {
-                self.vec.push(new_entry);
-            }
+            self.vec.push(new_entry);
             warn!("[ARP Cache] New entry registered");
 
             return ArpCacheUpdateResult::NewEntry;
+        }
+
+        if self.follow_update {
+            self.vec.push(new_entry);
         }
         ArpCacheUpdateResult::EntryDiff
     }
