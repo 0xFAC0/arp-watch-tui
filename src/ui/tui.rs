@@ -3,6 +3,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use log::error;
 use std::{io, error::Error};
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -45,9 +46,11 @@ pub async fn run_app<B: Backend>(term: &mut Terminal<B>, app: App) -> Result<(),
                 KeyCode::Char('q') => break,
                 KeyCode::Char('s') => {
                     let sender_mutex: NetArpSenderMutex = app.net_sender.clone();
-                    tokio::task::spawn(async move {
+                    tokio::spawn(async move {
                         let mut sender = sender_mutex.lock().await;
-                        sender.scan_network().await;
+                        if let Err(e) = sender.scan_network().await {
+                            error!("Scan hosts failed {e}");
+                        }
                     });
                 }
                 _ => continue,

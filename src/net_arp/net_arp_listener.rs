@@ -1,7 +1,7 @@
 use core::panic;
 use std::error::Error;
 
-use log::{warn, info};
+use log::info;
 use pnet::{
     datalink::{self, Channel::Ethernet, NetworkInterface},
     packet::{
@@ -29,6 +29,7 @@ impl NetArpListener {
     }
 
     pub async fn packet_handler(&mut self) -> Result<(), Box<dyn Error>> {
+        info!("Starting packet handler");
         loop {
             if let Ok(buf) = self.rx.next() {
                 let ethernet_packet = match EthernetPacket::new(buf) {
@@ -52,14 +53,14 @@ impl NetArpListener {
 
                 if operation == ArpOperations::Reply {
                     info!(
-                        "[Listener] ARP Reply\n[Listener] {} is at {}",
+                        "ARP Reply\n[Listener] {} is at {}",
                         sender_ip, sender_mac
                     );
                     let mut arp_cache = self.arp_cache.lock().await;
                     arp_cache.update(ArpEntry::new(sender_ip, sender_mac));
                 } else if operation == ArpOperations::Request && sender_ip == target_ip {
                     info!(
-                        "[Listener] ARP Annoncement\n[Listener] {} is at {}",
+                        "ARP Annoncement\n[Listener] {} is at {}",
                         sender_ip, sender_mac
                     );
                     let mut arp_cache = self.arp_cache.lock().await;

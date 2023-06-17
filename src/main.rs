@@ -16,16 +16,10 @@ async fn main() {
 
     let app = App::new(arp_cache_mutex, sender);
 
-    select!(
-        ret = tui::main_tui(app) => {
-            if let Err(e) = ret {
-                error!("TUI Failed: {e}")
-            }
-        },
-        ret = listener.packet_handler() => {
-            if let Err(e) = ret {
-                error!("Packet handler failed: {e}")
-            }
-        },
-    );
+    let listener_th = tokio::spawn(async move {
+        listener.packet_handler().await.unwrap();
+    });
+
+    tui::main_tui(app).await.unwrap();
+    listener_th.abort();
 }

@@ -1,4 +1,4 @@
-use std::{error::Error, net::IpAddr};
+use std::net::IpAddr;
 
 use log::info;
 use pnet::{
@@ -62,6 +62,7 @@ impl NetArpSender {
             ethernet_packet.set_ethertype(EtherTypes::Arp);
 
             let mut arp_buffer = [0u8; 28];
+            // TODO Error invalid ARP packet when Option is None
             let mut arp_packet = MutableArpPacket::new(&mut arp_buffer).unwrap();
 
             arp_packet.set_hardware_type(ArpHardwareTypes::Ethernet);
