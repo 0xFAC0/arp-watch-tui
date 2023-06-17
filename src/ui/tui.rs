@@ -1,5 +1,5 @@
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, poll},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -11,7 +11,7 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Paragraph},
     Frame, Terminal,
 };
-use std::{error::Error, io};
+use std::{error::Error, io, time::Duration};
 use tui_logger::{TuiLoggerLevelOutput, TuiLoggerWidget};
 
 use crate::net_arp::NetArpSenderMutex;
@@ -42,20 +42,23 @@ pub async fn run_app<B: Backend>(term: &mut Terminal<B>, app: App) -> Result<(),
     loop {
         term.draw(draw)?;
 
-        if let Event::Key(key) = event::read()? {
-            match key.code {
-                KeyCode::Char('q') => break,
-                KeyCode::Char('s') => {
-                    let sender_mutex: NetArpSenderMutex = app.net_sender.clone();
-                    tokio::spawn(async move {
-                        let mut sender = sender_mutex.lock().await;
-                        if let Err(e) = sender.scan_network().await {
-                            error!("Scan hosts failed {e}");
-                        }
-                    });
-                }
-                _ => continue,
-            };
+        if poll(Duration::from_millis(100)).unwrap() {
+            // Will not block thanks to event::poll
+            if let Event::Key(key) = event::read()? {
+                match key.code {
+                    KeyCode::Char('q') => break,
+                    KeyCode::Char('s') => {
+                        let sender_mutex: NetArpSenderMutex = app.net_sender.clone();
+                        tokio::spawn(async move {
+                            let mut sender = sender_mutex.lock().await;
+                            if let Err(e) = sender.scan_network().await {
+                                error!("Scan hosts failed {e}");
+                            }
+                        });
+                    }
+                    _ => continue,
+                };
+            }
         }
     }
     Ok(())
