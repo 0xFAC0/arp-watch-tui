@@ -73,7 +73,7 @@ impl ArpCache {
         let mut entry_diff = false;
         for entry in self.vec.iter() {
             if new_entry.ip == entry.ip && new_entry.mac == entry.mac {
-                info!("[ARP Cache] Entry already exist");
+                warn!("[ARP Cache] Entry already exist");
                 return ArpCacheUpdateResult::AlreadyExist;
             }
             if entry.ip == new_entry.ip && entry.mac != new_entry.mac {
@@ -91,7 +91,7 @@ impl ArpCache {
             if self.follow_update {
                 self.vec.push(new_entry);
             }
-            info!("[ARP Cache] New entry registered");
+            warn!("[ARP Cache] New entry registered");
 
             return ArpCacheUpdateResult::NewEntry;
         }

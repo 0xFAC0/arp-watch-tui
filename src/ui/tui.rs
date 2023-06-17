@@ -4,14 +4,14 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use log::error;
-use std::{error::Error, io};
-use tui::{
+use ratatui::{
     backend::{Backend, CrosstermBackend},
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Style},
     widgets::{Block, BorderType, Borders, Paragraph},
     Frame, Terminal,
 };
+use std::{error::Error, io};
 use tui_logger::{TuiLoggerLevelOutput, TuiLoggerWidget};
 
 use crate::net_arp::NetArpSenderMutex;
