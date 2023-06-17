@@ -4,11 +4,12 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use log::error;
-use std::{io, error::Error};
+use std::{error::Error, io};
 use tui::{
     backend::{Backend, CrosstermBackend},
+    layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Style},
-    widgets::{Block, BorderType, Borders},
+    widgets::{Block, BorderType, Borders, Paragraph},
     Frame, Terminal,
 };
 use tui_logger::{TuiLoggerLevelOutput, TuiLoggerWidget};
@@ -61,7 +62,7 @@ pub async fn run_app<B: Backend>(term: &mut Terminal<B>, app: App) -> Result<(),
 }
 
 pub fn draw<B: Backend>(frame: &mut Frame<B>) {
-    let tui_sm = TuiLoggerWidget::default()
+    let tui_log = TuiLoggerWidget::default()
         .style_error(Style::default().fg(Color::Red))
         .style_debug(Style::default().fg(Color::Green))
         .style_warn(Style::default().fg(Color::Yellow))
@@ -79,7 +80,23 @@ pub fn draw<B: Backend>(frame: &mut Frame<B>) {
                 .border_type(BorderType::Rounded)
                 .style(Style::default())
                 .title("Logs")
+                .title_alignment(Alignment::Center),
         );
 
-    frame.render_widget(tui_sm, frame.size());
+    let helper = Paragraph::new("s: scan hosts")
+        .alignment(Alignment::Center)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded),
+        );
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .margin(5)
+        .constraints([Constraint::Percentage(90), Constraint::Percentage(10)].as_ref())
+        .split(frame.size());
+
+    frame.render_widget(tui_log, chunks[0]);
+    frame.render_widget(helper, chunks[1]);
 }

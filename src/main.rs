@@ -1,8 +1,7 @@
 use std::{env, sync::Arc};
 
 use arp_watch::{arp_cache::ArpCache, net_arp::*, ui::*};
-use log::error;
-use tokio::{select, sync::Mutex};
+use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() {
