@@ -14,9 +14,9 @@ use ratatui::{
 use std::{error::Error, io, time::Duration};
 use tui_logger::{TuiLoggerLevelOutput, TuiLoggerWidget};
 
-use crate::net_arp::NetArpSenderMutex;
+use crate::{arp_cache::ArpEntry, net_arp::NetArpSenderMutex};
 
-use super::App;
+use super::{arp_cache_widget::ArpCacheWidget, App};
 
 pub async fn main_tui(app: App) -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
@@ -40,7 +40,8 @@ pub async fn main_tui(app: App) -> Result<(), Box<dyn Error>> {
 
 pub async fn run_app<B: Backend>(term: &mut Terminal<B>, app: App) -> Result<(), Box<dyn Error>> {
     loop {
-        term.draw(draw)?;
+        let arp_entries = app.arp_entries().await;
+        term.draw(|f| draw(f, arp_entries))?;
 
         if poll(Duration::from_millis(100)).unwrap() {
             // Will not block thanks to event::poll
@@ -69,7 +70,7 @@ pub async fn run_app<B: Backend>(term: &mut Terminal<B>, app: App) -> Result<(),
     Ok(())
 }
 
-pub fn draw<B: Backend>(frame: &mut Frame<B>) {
+pub fn draw<B: Backend>(frame: &mut Frame<B>, arp_entries: Vec<ArpEntry>) {
     let tui_log = TuiLoggerWidget::default()
         .style_error(Style::default().fg(Color::Red))
         .style_debug(Style::default().fg(Color::Green))
@@ -91,6 +92,14 @@ pub fn draw<B: Backend>(frame: &mut Frame<B>) {
                 .title_alignment(Alignment::Center),
         );
 
+    let arp_cache_widget = ArpCacheWidget::default()
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_type(BorderType::Rounded),
+        )
+        .entries(arp_entries);
+
     let helper = Paragraph::new("q: quit | s: scan hosts | f: toggle allow ARP entry change")
         .alignment(Alignment::Center)
         .block(
@@ -99,14 +108,19 @@ pub fn draw<B: Backend>(frame: &mut Frame<B>) {
                 .border_type(BorderType::Rounded),
         );
 
-    let chunks = Layout::default()
+    let root_layout = Layout::default()
         .direction(Direction::Vertical)
-        .margin(5)
-        .constraints([
-            Constraint::Min(0), Constraint::Max(3)
-            ].as_ref())
+        .margin(2)
+        .constraints([Constraint::Min(0), Constraint::Max(3)].as_ref())
         .split(frame.size());
 
-    frame.render_widget(tui_log, chunks[0]);
-    frame.render_widget(helper, chunks[1]);
+    let body_layout = Layout::default()
+        .direction(Direction::Horizontal)
+        .margin(2)
+        .constraints([Constraint::Min(0), Constraint::Max(38)].as_ref())
+        .split(root_layout[0]);
+
+    frame.render_widget(tui_log, body_layout[0]);
+    frame.render_widget(arp_cache_widget, body_layout[1]);
+    frame.render_widget(helper, root_layout[1]);
 }
