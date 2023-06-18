@@ -2,9 +2,8 @@
 # ARP Watch (TUI)
 
 Watch for ARP cache change and alert user with a notification
-The terminal user interface is still in dev and has been removed temporary  for polishing the back-end
-I will update the repo with the TUI made with `tui-rs` as soon as I'm satisfied with the back-end state
-and when I will have the dbus issue fixed
+
+**Work in progress**
 
 ## Dependencies
 only `libnotify` and Rust are required, let me know if you encounter any dependency issue
