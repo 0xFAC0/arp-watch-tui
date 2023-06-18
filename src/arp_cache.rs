@@ -61,6 +61,10 @@ impl ArpCache {
             words.next();
             // TODO parse the last collumn for the mask
             let mac_str = words.next().unwrap();
+            info!(
+                "Making new ARP Entry from existing cache: {} {}",
+                ip_str, mac_str
+            );
             let new_entry = ArpEntry::from(ip_str, mac_str);
 
             self.vec.push(new_entry);
@@ -73,11 +77,11 @@ impl ArpCache {
         let mut entry_diff = false;
         for entry in self.vec.iter() {
             if new_entry.ip == entry.ip && new_entry.mac == entry.mac {
-                warn!("[ARP Cache] Entry already exist");
+                warn!("Entry already exist");
                 return ArpCacheUpdateResult::AlreadyExist;
             }
             if entry.ip == new_entry.ip && entry.mac != new_entry.mac {
-                warn!("[ARP Cache] Entry divergence spotted");
+                warn!("Entry divergence spotted");
                 entry_diff = true;
                 alert(format!(
                     "[{}]\nwas {}, now {}",
@@ -89,7 +93,7 @@ impl ArpCache {
         if !entry_diff {
             alert(format!("{} at {}", new_entry.ip, new_entry.mac));
             self.vec.push(new_entry);
-            warn!("[ARP Cache] New entry registered");
+            warn!("New entry registered");
 
             return ArpCacheUpdateResult::NewEntry;
         }
@@ -111,10 +115,6 @@ impl ArpEntry {
     }
 
     pub fn from(ip_str: &str, mac_str: &str) -> Self {
-        info!(
-            "Making new ARP Entry from existing cache: {} {}",
-            ip_str, mac_str
-        );
         let ip: Ipv4Addr = ip_str.parse().unwrap();
         let mac: MacAddr = mac_str.parse().unwrap();
         Self { ip, mac }
