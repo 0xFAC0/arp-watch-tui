@@ -99,6 +99,10 @@ impl ArpCache {
         }
         ArpCacheUpdateResult::EntryDiff
     }
+
+    pub fn entries(&self) -> Vec<ArpEntry> {
+        self.vec.clone()
+    }
 }
 
 impl ArpEntry {
