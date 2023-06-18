@@ -4,6 +4,6 @@ pub mod app;
 pub mod tui;
 
 pub struct App {
-    _arp_cache: ArpCacheMutex,
+    arp_cache: ArpCacheMutex,
     net_sender: NetArpSenderMutex,
 }
