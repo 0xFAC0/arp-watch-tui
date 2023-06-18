@@ -13,7 +13,7 @@ pub type ArpCacheMutex = Arc<Mutex<ArpCache>>;
 #[derive(Debug, Clone)]
 pub struct ArpCache {
     vec: Vec<ArpEntry>,
-    follow_update: bool,
+    pub follow_update: bool,
 }
 
 pub enum ArpCacheUpdateResult {

@@ -1,5 +1,5 @@
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, poll},
+    event::{self, poll, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -56,6 +56,11 @@ pub async fn run_app<B: Backend>(term: &mut Terminal<B>, app: App) -> Result<(),
                             }
                         });
                     }
+                    KeyCode::Char('f') => {
+                        let mut arp_cache = app.arp_cache.lock().await;
+                        arp_cache.follow_update = !arp_cache.follow_update;
+                        drop(arp_cache);
+                    }
                     _ => continue,
                 };
             }
@@ -86,7 +91,7 @@ pub fn draw<B: Backend>(frame: &mut Frame<B>) {
                 .title_alignment(Alignment::Center),
         );
 
-    let helper = Paragraph::new("s: scan hosts")
+    let helper = Paragraph::new("q: quit | s: scan hosts | f: toggle allow ARP entry change")
         .alignment(Alignment::Center)
         .block(
             Block::default()
