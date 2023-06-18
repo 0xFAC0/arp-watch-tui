@@ -97,7 +97,9 @@ pub fn draw<B: Backend>(frame: &mut Frame<B>) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(5)
-        .constraints([Constraint::Percentage(90), Constraint::Percentage(10)].as_ref())
+        .constraints([
+            Constraint::Min(0), Constraint::Max(3)
+            ].as_ref())
         .split(frame.size());
 
     frame.render_widget(tui_log, chunks[0]);
