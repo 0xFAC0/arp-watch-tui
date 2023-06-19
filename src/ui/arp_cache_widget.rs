@@ -50,19 +50,15 @@ impl<'a> Widget for ArpCacheWidget<'a> {
             .map(|entry| format!(" {} at {} ", entry.ip(), entry.mac()))
             .collect();
 
-        let max_width = text_area.width;
+        let max_width = text_area.width as usize;
         let mut wrapped_lines: Vec<String> = vec![];
-        for line in lines.iter_mut() {
-            while line.len() > 0 {
-                let mut wrapped_line = String::new();
-                for _ in 0..max_width {
-                    match line.pop() {
-                        Some(c) => wrapped_line.push(c),
-                        None => break,
-                    };
-                }
-                wrapped_lines.push(wrapped_line);
+        for mut line in lines.into_iter() {
+            while line.len() > max_width {
+                let overflow = line.split_off(max_width);
+                wrapped_lines.push(line);
+                line = overflow;
             }
+            wrapped_lines.push(line);
         }
 
         for (i, line) in wrapped_lines.iter().enumerate() {
