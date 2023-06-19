@@ -34,7 +34,7 @@ Feel free to contribute or share your ideas as the current *fix* is temporary
 - [x] Track new or changed ARP entry
 - [ ] Daemon 
 - [x] Desktop Notification (TODO fix dbus)
-- [ ] auto ReARP
+- [ ] Kernel module
 - [ ] TUI 
 	- [x] Logs
 	- [ ] List hosts
