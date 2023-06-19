@@ -117,7 +117,7 @@ pub fn draw<B: Backend>(frame: &mut Frame<B>, arp_entries: Vec<ArpEntry>) {
     let body_layout = Layout::default()
         .direction(Direction::Horizontal)
         .margin(2)
-        .constraints([Constraint::Min(0), Constraint::Max(38)].as_ref())
+        .constraints([Constraint::Ratio(3, 4), Constraint::Ratio(1, 4)].as_ref())
         .split(root_layout[0]);
 
     frame.render_widget(tui_log, body_layout[0]);

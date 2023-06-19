@@ -44,8 +44,28 @@ impl<'a> Widget for ArpCacheWidget<'a> {
             None => area,
         };
 
-        for (i, entry) in self.entries.iter().enumerate() {
-            let line = format!(" {} at {} ", entry.ip(), entry.mac());
+        let mut lines: Vec<String> = self
+            .entries
+            .iter()
+            .map(|entry| format!(" {} at {} ", entry.ip(), entry.mac()))
+            .collect();
+
+        let max_width = text_area.width;
+        let mut wrapped_lines: Vec<String> = vec![];
+        for line in lines.iter_mut() {
+            while line.len() > 0 {
+                let mut wrapped_line = String::new();
+                for _ in 0..max_width {
+                    match line.pop() {
+                        Some(c) => wrapped_line.push(c),
+                        None => break,
+                    };
+                }
+                wrapped_lines.push(wrapped_line);
+            }
+        }
+
+        for (i, line) in wrapped_lines.iter().enumerate() {
             let len = line.len();
             buf.set_stringn(
                 text_area.left(),
