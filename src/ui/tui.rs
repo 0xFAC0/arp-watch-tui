@@ -3,18 +3,16 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use log::error;
+
 use ratatui::{
     backend::{Backend, CrosstermBackend},
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Style},
-    widgets::{Block, BorderType, Borders, Paragraph},
+    widgets::{Block, BorderType, Borders},
     Frame, Terminal,
 };
 use std::{error::Error, io, time::Duration};
 use tui_logger::{TuiLoggerLevelOutput, TuiLoggerWidget};
-
-use crate::net_arp::NetArpSenderMutex;
 
 use super::{arp_cache_widget::ArpCacheWidget, helper::helper, App, UiSettings};
 
@@ -52,16 +50,13 @@ pub async fn run_app<B: Backend>(
                 match key.code {
                     KeyCode::Char('q') => break,
                     KeyCode::Char('s') => {
-                        let sender_mutex: NetArpSenderMutex = app.net_sender.clone();
-                        tokio::spawn(async move {
-                            let mut sender = sender_mutex.lock().await;
-                            if let Err(e) = sender.scan_network().await {
-                                error!("Scan hosts failed {e}");
-                            }
-                        });
+                        app.start_scan_hosts().await;
                     }
                     KeyCode::Char('f') => {
                         app.toggle_follow_mode().await;
+                    }
+                    KeyCode::Char('r') => {
+                        app.toggle_enable_rearping().await;
                     }
                     _ => continue,
                 };

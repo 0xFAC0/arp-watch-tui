@@ -4,12 +4,14 @@ use log::info;
 use pnet::{
     datalink::{self, Channel::Ethernet, NetworkInterface},
     packet::{
-        arp::{ArpHardwareTypes, ArpOperations, MutableArpPacket},
+        arp::{ArpHardwareTypes, ArpOperation, ArpOperations, MutableArpPacket},
         ethernet::{EtherTypes, MutableEthernetPacket},
-        MutablePacket, Packet,
+        Packet,
     },
     util::MacAddr,
 };
+
+use crate::arp_cache::ArpEntry;
 
 use super::*;
 
@@ -43,7 +45,52 @@ impl NetArpSender {
         }
     }
 
-    pub async fn scan_network(&mut self) -> std::io::Result<()> {
+    pub fn build_packet<'a>(
+        operation: ArpOperation,
+        ip_source: Ipv4Addr,
+        hw_source: MacAddr,
+        ip_target: Ipv4Addr,
+        hw_target: MacAddr,
+    ) -> MutableEthernetPacket<'a> {
+        let ethernet_buffer = Vec::from([0u8; 42]);
+        let mut ethernet_packet = MutableEthernetPacket::owned(ethernet_buffer).unwrap();
+
+        ethernet_packet.set_destination(MacAddr::broadcast());
+        ethernet_packet.set_source(hw_source);
+        ethernet_packet.set_ethertype(EtherTypes::Arp);
+
+        let arp_buffer = Vec::from([0u8; 28]);
+
+        // TODO Error invalid ARP packet when Option is None
+        let mut arp_packet = MutableArpPacket::owned(arp_buffer).unwrap();
+
+        arp_packet.set_hardware_type(ArpHardwareTypes::Ethernet);
+        arp_packet.set_protocol_type(EtherTypes::Ipv4);
+        arp_packet.set_hw_addr_len(6);
+        arp_packet.set_proto_addr_len(4);
+        arp_packet.set_operation(operation);
+        arp_packet.set_sender_hw_addr(hw_source);
+        arp_packet.set_sender_proto_addr(ip_source);
+        arp_packet.set_target_hw_addr(hw_target);
+        arp_packet.set_target_proto_addr(ip_target);
+
+        ethernet_packet.set_payload(arp_packet.packet());
+        ethernet_packet
+    }
+
+    pub fn rearp(&mut self, entry: ArpEntry) {
+        info!("ReARPing");
+        let packet = Self::build_packet(
+            ArpOperations::Request,
+            *entry.ip(),
+            *entry.mac(),
+            self.source_ip,
+            self.source_mac,
+        );
+        self.tx.send_to(packet.packet(), None).unwrap().unwrap();
+    }
+
+    pub fn scan_network(&mut self) -> std::io::Result<()> {
         info!("Starting host scan on {}", self.network_addr);
 
         // Very nice network address range traversal from ipnetwork
@@ -51,34 +98,19 @@ impl NetArpSender {
             // Unwrapp IpAddr to Ipv4Addr
             let target_ip = match target_ip {
                 IpAddr::V4(addr) => addr,
+                // TODO Implement Ipv6
                 IpAddr::V6(_) => panic!("Ipv6 unsupported yet"),
             };
 
-            let mut ethernet_buffer = [0u8; 42];
-            let mut ethernet_packet = MutableEthernetPacket::new(&mut ethernet_buffer).unwrap();
+            let packet = Self::build_packet(
+                ArpOperations::Request,
+                self.source_ip,
+                self.source_mac,
+                target_ip,
+                MacAddr::broadcast(),
+            );
 
-            ethernet_packet.set_destination(MacAddr::broadcast());
-            ethernet_packet.set_source(self.source_mac);
-            ethernet_packet.set_ethertype(EtherTypes::Arp);
-
-            let mut arp_buffer = [0u8; 28];
-            // TODO Error invalid ARP packet when Option is None
-            let mut arp_packet = MutableArpPacket::new(&mut arp_buffer).unwrap();
-
-            arp_packet.set_hardware_type(ArpHardwareTypes::Ethernet);
-            arp_packet.set_protocol_type(EtherTypes::Ipv4);
-            arp_packet.set_hw_addr_len(6);
-            arp_packet.set_proto_addr_len(4);
-            arp_packet.set_operation(ArpOperations::Request);
-            arp_packet.set_sender_hw_addr(self.source_mac);
-            arp_packet.set_sender_proto_addr(self.source_ip);
-            arp_packet.set_target_hw_addr(MacAddr::broadcast());
-            arp_packet.set_target_proto_addr(target_ip);
-
-            // Smooth
-            ethernet_packet.set_payload(arp_packet.packet_mut());
-
-            self.tx.send_to(ethernet_packet.packet(), None).unwrap()?;
+            self.tx.send_to(packet.packet(), None).unwrap()?;
         }
         info!("Done sending arp request");
         Ok(())

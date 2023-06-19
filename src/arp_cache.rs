@@ -1,19 +1,22 @@
-use std::{error::Error, fs::File, io::Read, net::Ipv4Addr, path::Path, sync::Arc};
+use std::{net::Ipv4Addr, path::Path, sync::Arc};
+use tokio::{fs::File, io::AsyncReadExt};
 
 use log::{info, warn};
 use pnet::util::MacAddr;
 use tokio::sync::Mutex;
 
-use crate::alert::alert;
+use crate::{alert::alert, net_arp::NetArpSender};
 
 const PATH: &str = "/proc/net/arp";
 
 pub type ArpCacheMutex = Arc<Mutex<ArpCache>>;
 
-#[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct ArpCache {
     vec: Vec<ArpEntry>,
     pub follow_update: bool,
+    pub rearp_enable: bool,
+    net_sender: Option<NetArpSender>,
 }
 
 pub enum ArpCacheUpdateResult {
@@ -29,23 +32,58 @@ pub struct ArpEntry {
 }
 
 impl ArpCache {
-    pub fn new(follow_update: bool) -> Self {
-        let mut ret = ArpCache {
-            vec: vec![],
-            follow_update,
-        };
-        ret.parse().unwrap();
-        ret
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    pub fn parse(&mut self) -> std::result::Result<u8, Box<dyn Error>> {
-        let mut entry_count: u8 = 0;
+    pub fn follow_update(mut self, follow_update: bool) -> Self {
+        self.follow_update = follow_update;
+        self
+    }
+
+    pub fn rearp(mut self, rearp: bool) -> Self {
+        self.rearp_enable = rearp;
+        self
+    }
+
+    pub fn net_sender(mut self, net_sender: NetArpSender) -> Self {
+        self.net_sender = Some(net_sender);
+        self
+    }
+
+    pub async fn parse_from_cache(mut self) -> Self {
+        self.vec = Self::parse_fs_cache().await;
+        self
+    }
+
+    pub fn entries(&self) -> Vec<ArpEntry> {
+        self.vec.clone()
+    }
+
+    pub fn start_rearping(&mut self, entry: ArpEntry) {
+        match &mut self.net_sender {
+            Some(net_sender) => net_sender.rearp(entry),
+            None => warn!("Could not rearp {:?}, no sender available", entry),
+        };
+    }
+
+    pub fn start_network_scan(&mut self) {
+        match &mut self.net_sender {
+            Some(net_sender) => {
+                net_sender.scan_network().unwrap();
+            }
+            None => warn!("Could not start the scan, no sender available"),
+        }
+    }
+
+    async fn parse_fs_cache() -> Vec<ArpEntry> {
+        let mut vec = vec![];
 
         let path = Path::new(PATH);
-        let mut file = File::open(path)?;
+        let mut file = File::open(path).await.unwrap();
 
         let mut file_content = String::new();
-        file.read_to_string(&mut file_content).unwrap();
+        file.read_to_string(&mut file_content).await.unwrap();
         for line in file_content.lines() {
             let mut words = line.split_whitespace();
             let ip_str = match words.next() {
@@ -67,22 +105,21 @@ impl ArpCache {
             );
             let new_entry = ArpEntry::from(ip_str, mac_str);
 
-            self.vec.push(new_entry);
-            entry_count += 1;
+            vec.push(new_entry);
         }
-        Ok(entry_count)
+        vec
     }
 
     pub fn update(&mut self, new_entry: ArpEntry) -> ArpCacheUpdateResult {
-        let mut entry_diff = false;
-        for entry in self.vec.iter() {
+        let mut entry_diff: Option<(usize, ArpEntry)> = None;
+        for (i, entry) in self.vec.iter().enumerate() {
             if new_entry.ip == entry.ip && new_entry.mac == entry.mac {
                 warn!("Entry already exist");
                 return ArpCacheUpdateResult::AlreadyExist;
             }
             if entry.ip == new_entry.ip && entry.mac != new_entry.mac {
                 warn!("Entry divergence spotted");
-                entry_diff = true;
+                entry_diff = Some((i, entry.clone()));
                 alert(format!(
                     "[{}]\nwas {}, now {}",
                     entry.ip, entry.mac, new_entry.mac
@@ -90,22 +127,29 @@ impl ArpCache {
             }
         }
 
-        if !entry_diff {
-            alert(format!("{} at {}", new_entry.ip, new_entry.mac));
-            self.vec.push(new_entry);
-            warn!("New entry registered");
+        match entry_diff {
+            Some((i, old_entry)) => {
+                if self.follow_update {
+                    self.vec.push(new_entry);
+                    self.vec.remove(i);
+                }
 
-            return ArpCacheUpdateResult::NewEntry;
+                if self.rearp_enable {
+                    match &mut self.net_sender {
+                        Some(net_sender) => net_sender.rearp(old_entry),
+                        None => (),
+                    }
+                }
+                ArpCacheUpdateResult::EntryDiff
+            }
+            None => {
+                alert(format!("{} at {}", new_entry.ip, new_entry.mac));
+                self.vec.push(new_entry);
+                warn!("New entry registered");
+
+                return ArpCacheUpdateResult::NewEntry;
+            }
         }
-
-        if self.follow_update {
-            self.vec.push(new_entry);
-        }
-        ArpCacheUpdateResult::EntryDiff
-    }
-
-    pub fn entries(&self) -> Vec<ArpEntry> {
-        self.vec.clone()
     }
 }
 
