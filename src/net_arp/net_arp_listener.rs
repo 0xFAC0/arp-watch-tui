@@ -52,10 +52,7 @@ impl NetArpListener {
                 let sender_ip = arp_packet.get_sender_proto_addr();
 
                 if operation == ArpOperations::Reply {
-                    info!(
-                        "ARP Reply\n[Listener] {} is at {}",
-                        sender_ip, sender_mac
-                    );
+                    info!("ARP Reply\n[Listener] {} is at {}", sender_ip, sender_mac);
                     let mut arp_cache = self.arp_cache.lock().await;
                     arp_cache.update(ArpEntry::new(sender_ip, sender_mac));
                 } else if operation == ArpOperations::Request && sender_ip == target_ip {

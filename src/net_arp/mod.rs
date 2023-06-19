@@ -15,7 +15,6 @@ pub mod net_arp_watcher;
 
 pub type NetArpSenderMutex = Arc<Mutex<NetArpSender>>;
 
-
 pub struct NetArpWatcher {
     interface: NetworkInterface,
 }

@@ -11,7 +11,6 @@ use crate::arp_cache::ArpEntry;
 pub struct ArpCacheWidget<'a> {
     style: Style,
     block: Option<Block<'a>>,
-
     entries: Vec<ArpEntry>,
 }
 
@@ -44,7 +43,7 @@ impl<'a> Widget for ArpCacheWidget<'a> {
             None => area,
         };
 
-        let mut lines: Vec<String> = self
+        let lines: Vec<String> = self
             .entries
             .iter()
             .map(|entry| format!(" {} at {} ", entry.ip(), entry.mac()))

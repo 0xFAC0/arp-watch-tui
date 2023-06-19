@@ -6,10 +6,11 @@ pub fn info(body: String) {
         .appname("ARP Alert")
         .summary("Info")
         .body(&body)
-        .show() {
-            Ok(_) => (),
-            Err(e) => error!("{e}")
-        }
+        .show()
+    {
+        Ok(_) => (),
+        Err(e) => error!("{e}"),
+    }
 }
 
 pub fn alert(body: String) {
@@ -17,8 +18,9 @@ pub fn alert(body: String) {
         .appname("ARP Alert")
         .summary("Alert")
         .body(&body)
-        .show() {
-            Ok(_) => (),
-            Err(e) => error!("{e}")
-        }
+        .show()
+    {
+        Ok(_) => (),
+        Err(e) => error!("{e}"),
+    }
 }
