@@ -14,9 +14,9 @@ use ratatui::{
 use std::{error::Error, io, time::Duration};
 use tui_logger::{TuiLoggerLevelOutput, TuiLoggerWidget};
 
-use crate::{arp_cache::ArpEntry, net_arp::NetArpSenderMutex};
+use crate::net_arp::NetArpSenderMutex;
 
-use super::{arp_cache_widget::ArpCacheWidget, App};
+use super::{arp_cache_widget::ArpCacheWidget, helper::helper, App, UiSettings};
 
 pub async fn main_tui(app: App) -> Result<(), Box<dyn Error>> {
     enable_raw_mode()?;
@@ -38,10 +38,13 @@ pub async fn main_tui(app: App) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub async fn run_app<B: Backend>(term: &mut Terminal<B>, mut app: App) -> Result<(), Box<dyn Error>> {
+pub async fn run_app<B: Backend>(
+    term: &mut Terminal<B>,
+    mut app: App,
+) -> Result<(), Box<dyn Error>> {
     loop {
-        let arp_entries = app.arp_entries().await;
-        term.draw(|f| draw(f, arp_entries))?;
+        let ui_settings = app.get_ui_settings().await;
+        term.draw(|f| draw(f, ui_settings))?;
 
         if poll(Duration::from_millis(100)).unwrap() {
             // Will not block thanks to event::poll
@@ -68,7 +71,7 @@ pub async fn run_app<B: Backend>(term: &mut Terminal<B>, mut app: App) -> Result
     Ok(())
 }
 
-pub fn draw<B: Backend>(frame: &mut Frame<B>, arp_entries: Vec<ArpEntry>) {
+pub fn draw<B: Backend>(frame: &mut Frame<B>, ui_settings: UiSettings) {
     let tui_log = TuiLoggerWidget::default()
         .style_error(Style::default().fg(Color::Red))
         .style_debug(Style::default().fg(Color::Green))
@@ -94,17 +97,17 @@ pub fn draw<B: Backend>(frame: &mut Frame<B>, arp_entries: Vec<ArpEntry>) {
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_type(BorderType::Rounded),
+                .border_type(BorderType::Rounded)
+                .title("ARP Cache")
+                .title_alignment(Alignment::Center),
         )
-        .entries(arp_entries);
+        .entries(&ui_settings.arp_entries);
 
-    let helper = Paragraph::new("q: quit | s: scan hosts | f: toggle allow ARP entry change")
-        .alignment(Alignment::Center)
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded),
-        );
+    let helper = helper(&ui_settings).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_type(BorderType::Rounded),
+    );
 
     let root_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -115,7 +118,7 @@ pub fn draw<B: Backend>(frame: &mut Frame<B>, arp_entries: Vec<ArpEntry>) {
     let body_layout = Layout::default()
         .direction(Direction::Horizontal)
         .margin(2)
-        .constraints([Constraint::Ratio(3, 4), Constraint::Ratio(1, 4)].as_ref())
+        .constraints([Constraint::Ratio(2, 3), Constraint::Ratio(1, 3)].as_ref())
         .split(root_layout[0]);
 
     frame.render_widget(tui_log, body_layout[0]);
