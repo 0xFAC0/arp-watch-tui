@@ -38,7 +38,7 @@ pub async fn main_tui(app: App) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub async fn run_app<B: Backend>(term: &mut Terminal<B>, app: App) -> Result<(), Box<dyn Error>> {
+pub async fn run_app<B: Backend>(term: &mut Terminal<B>, mut app: App) -> Result<(), Box<dyn Error>> {
     loop {
         let arp_entries = app.arp_entries().await;
         term.draw(|f| draw(f, arp_entries))?;
@@ -58,9 +58,7 @@ pub async fn run_app<B: Backend>(term: &mut Terminal<B>, app: App) -> Result<(),
                         });
                     }
                     KeyCode::Char('f') => {
-                        let mut arp_cache = app.arp_cache.lock().await;
-                        arp_cache.follow_update = !arp_cache.follow_update;
-                        drop(arp_cache);
+                        app.toggle_follow_mode().await;
                     }
                     _ => continue,
                 };

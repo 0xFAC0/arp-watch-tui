@@ -21,4 +21,9 @@ impl App {
         let arp_cache = self.arp_cache.lock().await;
         arp_cache.entries()
     }
+
+    pub async fn toggle_follow_mode(&mut self) {
+        let mut arp_cache = self.arp_cache.lock().await;
+        arp_cache.follow_update = !arp_cache.follow_update;
+    }
 }
