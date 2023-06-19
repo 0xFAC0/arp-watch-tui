@@ -11,12 +11,12 @@ use crate::arp_cache::ArpEntry;
 pub struct ArpCacheWidget<'a> {
     style: Style,
     block: Option<Block<'a>>,
-    entries: Vec<ArpEntry>,
+    entries: Option<&'a Vec<ArpEntry>>,
 }
 
 impl<'a> ArpCacheWidget<'a> {
-    pub fn entries(mut self, vec: Vec<ArpEntry>) -> Self {
-        self.entries = vec;
+    pub fn entries(mut self, vec: &'a Vec<ArpEntry>) -> Self {
+        self.entries = Some(vec);
         self
     }
 
@@ -43,8 +43,12 @@ impl<'a> Widget for ArpCacheWidget<'a> {
             None => area,
         };
 
-        let lines: Vec<String> = self
-            .entries
+        let entries = match self.entries {
+            Some(entries) => entries,
+            None => return,
+        };
+
+        let lines: Vec<String> = entries
             .iter()
             .map(|entry| format!(" {} at {} ", entry.ip(), entry.mac()))
             .collect();
