@@ -2,10 +2,7 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use crate::{
-    arp_cache::ArpCacheMutex,
-    net_arp::NetArpSender,
-};
+use crate::{arp_cache::ArpCacheMutex, net_arp::NetArpSender};
 
 use super::*;
 

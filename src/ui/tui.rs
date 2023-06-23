@@ -72,6 +72,11 @@ pub async fn run_app<B: Backend>(
 }
 
 pub fn draw<B: Backend>(frame: &mut Frame<B>, ui_settings: UiSettings) {
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::Gray))
+        .border_type(BorderType::Rounded);
+
     let tui_log = TuiLoggerWidget::default()
         .style_error(Style::default().fg(Color::Red))
         .style_debug(Style::default().fg(Color::Green))
@@ -85,33 +90,26 @@ pub fn draw<B: Backend>(frame: &mut Frame<B>, ui_settings: UiSettings) {
         .output_file(true)
         .output_line(true)
         .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
-                .style(Style::default())
+            block
+                .clone()
                 .title("Logs")
                 .title_alignment(Alignment::Center),
         );
 
     let arp_cache_widget = ArpCacheWidget::default()
         .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_type(BorderType::Rounded)
+            block
+                .clone()
                 .title("ARP Cache")
                 .title_alignment(Alignment::Center),
         )
         .entries(&ui_settings.arp_entries);
 
-    let helper = helper(&ui_settings).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_type(BorderType::Rounded),
-    );
+    let helper = helper(&ui_settings).block(block.clone());
 
     let root_layout = Layout::default()
         .direction(Direction::Vertical)
-        .margin(2)
+        .margin(0)
         .constraints([Constraint::Min(0), Constraint::Max(3)].as_ref())
         .split(frame.size());
 

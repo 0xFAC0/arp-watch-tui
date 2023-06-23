@@ -1,4 +1,7 @@
-use crate::{arp_cache::{ArpCacheMutex, ArpEntry}, net_arp::NetArpSenderMutex};
+use crate::{
+    arp_cache::{ArpCacheMutex, ArpEntry},
+    net_arp::NetArpSenderMutex,
+};
 
 pub mod app;
 pub mod arp_cache_widget;
