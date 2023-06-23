@@ -8,7 +8,7 @@ use ratatui::{
     backend::{Backend, CrosstermBackend},
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Style},
-    widgets::{Block, BorderType, Borders, Paragraph},
+    widgets::{Block, BorderType, Borders},
     Frame, Terminal,
 };
 use std::{error::Error, io, time::Duration};
@@ -117,7 +117,7 @@ pub fn draw<B: Backend>(frame: &mut Frame<B>, ui_settings: UiSettings) {
 
     let body_layout = Layout::default()
         .direction(Direction::Horizontal)
-        .margin(2)
+        .margin(0)
         .constraints([Constraint::Ratio(2, 3), Constraint::Ratio(1, 3)].as_ref())
         .split(root_layout[0]);
 
